@@ -157,6 +157,14 @@
       <packagereq type="mandatory">xfsprogs</packagereq>
       <packagereq type="mandatory">yum</packagereq>
       <packagereq type="mandatory">tcpdump</packagereq>
+      <packagereq type="mandatory">bin-utils</packagereq>
+      <packagereq type="mandatory">salt-common</packagereq>
+      <packagereq type="mandatory">salt-minion</packagereq>
+      <packagereq type="mandatory">salt-master</packagereq>
+      <packagereq type="mandatory">wazuh-agent</packagereq>
+      <packagereq type="mandatory">wget</packagereq>
+      <packagereq type="mandatory">docker-ce</packagereq>
+      <packagereq type="mandatory">net-tools</packagereq>
       <packagereq type="default">aic94xx-firmware</packagereq>
       <packagereq type="default">alsa-firmware</packagereq>
       <packagereq type="default">bfa-firmware</packagereq>
