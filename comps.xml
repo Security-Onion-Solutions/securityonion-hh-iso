@@ -157,8 +157,7 @@
       <packagereq type="mandatory">xfsprogs</packagereq>
       <packagereq type="mandatory">yum</packagereq>
       <packagereq type="mandatory">tcpdump</packagereq>
-      <packagereq type="mandatory">bin-utils</packagereq>
-      <packagereq type="mandatory">salt-common</packagereq>
+      <packagereq type="mandatory">bind-utils</packagereq>
       <packagereq type="mandatory">salt-minion</packagereq>
       <packagereq type="mandatory">salt-master</packagereq>
       <packagereq type="mandatory">wazuh-agent</packagereq>

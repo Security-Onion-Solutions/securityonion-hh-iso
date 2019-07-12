@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Global Variable Section
-HOSTNAME=$(cat /etc/hostname)
+#HOSTNAME=$(cat /etc/hostname)
 TOTAL_MEM=`grep MemTotal /proc/meminfo | awk '{print $2}' | sed -r 's/.{3}$//'`
 NICS=$(ip link | awk -F: '$0 !~ "lo|vir|veth|br|docker|wl|^[^0-9]"{print $2 " \"" "Interface" "\"" " OFF"}')
 CPUCORES=$(cat /proc/cpuinfo | grep processor | wc -l)
@@ -32,6 +32,7 @@ date -u >~/sosetup.log 2>&1
 # Functions
 
 accept_salt_key_local() {
+
   echo "Accept the key locally on the master" >>~/sosetup.log 2>&1
   # Accept the key locally on the master
   salt-key -ya $HOSTNAME
@@ -39,6 +40,7 @@ accept_salt_key_local() {
 }
 
 accept_salt_key_remote() {
+
   echo "Accept the key remotely on the master" >>~/sosetup.log 2>&1
   # Delete the key just in case.
   ssh -i /root/.ssh/so.key socore@$MSRV sudo salt-key -d $HOSTNAME -y
@@ -47,7 +49,16 @@ accept_salt_key_remote() {
 
 }
 
+add_admin_user() {
+
+  # Add an admin user with full sudo rights.
+  useradd $ADMINUSER && echo $ADMINUSER:$ADMINPASS1 | chpasswd --crypt-method=SHA512
+  usermod -aG wheel $ADMINUSER
+
+}
+
 add_master_hostfile() {
+
   echo "Checking if I can resolve master. If not add to hosts file" >>~/sosetup.log 2>&1
   # Pop up an input to get the IP address
   local MSRVIP=$(whiptail --title "Security Onion Setup" --inputbox \
@@ -57,24 +68,22 @@ add_master_hostfile() {
   if ! grep -q $MSRVIP /etc/hosts; then
     echo "$MSRVIP   $MSRV" >> /etc/hosts
   fi
+
 }
 
 add_socore_user_master() {
+
   echo "Add socore on the master" >>~/sosetup.log 2>&1
-  if [ $OS == 'centos' ]; then
-    local ADDUSER=adduser
-  else
-    local ADDUSER=useradd
-  fi
   # Add user "socore" to the master. This will be for things like accepting keys.
   groupadd --gid 939 socore
-  $ADDUSER --uid 939 --gid 939 --home-dir /opt/so socore
-  # Prompt the user to set a password for the user
-  passwd socore
+  adduser --uid 939 --gid 939 --home-dir /opt/so socore
+  # Set the password for socore that we got during setup
+  echo socore:$COREPASS1 | chpasswd --crypt-method=SHA512
 
 }
 
 add_socore_user_notmaster() {
+
   echo "Add socore user on non master" >>~/sosetup.log 2>&1
   # Add socore user to the non master system. Probably not a bad idea to make system user
   groupadd --gid 939 socore
@@ -97,54 +106,55 @@ auth_pillar(){
 
 # Enable Bro Logs
 bro_logs_enabled() {
+
   echo "Enabling Bro Logs" >>~/sosetup.log 2>&1
 
-  echo "brologs:" > pillar/brologs.sls
-  echo "  enabled:" >> pillar/brologs.sls
+  echo "brologs:" > /root/SecurityOnion/pillar/brologs.sls
+  echo "  enabled:" >> /root/SecurityOnion/pillar/brologs.sls
 
   if [ $MASTERADV == 'ADVANCED' ]; then
     for BLOG in ${BLOGS[@]}; do
-      echo "    - $BLOG" | tr -d '"' >> pillar/brologs.sls
+      echo "    - $BLOG" | tr -d '"' >> /root/SecurityOnion/pillar/brologs.sls
     done
   else
-    echo "    - conn" >> pillar/brologs.sls
-    echo "    - dce_rpc" >> pillar/brologs.sls
-    echo "    - dhcp" >> pillar/brologs.sls
-    echo "    - dhcpv6" >> pillar/brologs.sls
-    echo "    - dnp3" >> pillar/brologs.sls
-    echo "    - dns" >> pillar/brologs.sls
-    echo "    - dpd" >> pillar/brologs.sls
-    echo "    - files" >> pillar/brologs.sls
-    echo "    - ftp" >> pillar/brologs.sls
-    echo "    - http" >> pillar/brologs.sls
-    echo "    - intel" >> pillar/brologs.sls
-    echo "    - irc" >> pillar/brologs.sls
-    echo "    - kerberos" >> pillar/brologs.sls
-    echo "    - modbus" >> pillar/brologs.sls
-    echo "    - mqtt" >> pillar/brologs.sls
-    echo "    - notice" >> pillar/brologs.sls
-    echo "    - ntlm" >> pillar/brologs.sls
-    echo "    - openvpn" >> pillar/brologs.sls
-    echo "    - pe" >> pillar/brologs.sls
-    echo "    - radius" >> pillar/brologs.sls
-    echo "    - rfb" >> pillar/brologs.sls
-    echo "    - rdp" >> pillar/brologs.sls
-    echo "    - signatures" >> pillar/brologs.sls
-    echo "    - sip" >> pillar/brologs.sls
-    echo "    - smb_files" >> pillar/brologs.sls
-    echo "    - smb_mapping" >> pillar/brologs.sls
-    echo "    - smtp" >> pillar/brologs.sls
-    echo "    - snmp" >> pillar/brologs.sls
-    echo "    - software" >> pillar/brologs.sls
-    echo "    - ssh" >> pillar/brologs.sls
-    echo "    - ssl" >> pillar/brologs.sls
-    echo "    - syslog" >> pillar/brologs.sls
-    echo "    - telnet" >> pillar/brologs.sls
-    echo "    - tunnel" >> pillar/brologs.sls
-    echo "    - weird" >> pillar/brologs.sls
-    echo "    - mysql" >> pillar/brologs.sls
-    echo "    - socks" >> pillar/brologs.sls
-    echo "    - x509" >> pillar/brologs.sls
+    echo "    - conn" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dce_rpc" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dhcp" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dhcpv6" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dnp3" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dns" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - dpd" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - files" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - ftp" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - http" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - intel" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - irc" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - kerberos" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - modbus" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - mqtt" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - notice" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - ntlm" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - openvpn" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - pe" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - radius" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - rfb" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - rdp" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - signatures" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - sip" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - smb_files" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - smb_mapping" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - smtp" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - snmp" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - software" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - ssh" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - ssl" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - syslog" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - telnet" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - tunnel" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - weird" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - mysql" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - socks" >> /root/SecurityOnion/pillar/brologs.sls
+    echo "    - x509" >> /root/SecurityOnion/pillar/brologs.sls
   fi
 }
 
@@ -162,9 +172,31 @@ calculate_useable_cores() {
 
 }
 
+check_admin_pass() {
+
+  if [ $ADMINPASS1 == $ADMINPASS2 ]; then
+    APMATCH=yes
+  else
+    whiptail_passwords_dont_match
+  fi
+
+}
+
+check_socore_pass() {
+
+  if [ $COREPASS1 == $COREPASS2 ]; then
+    SCMATCH=yes
+  else
+    whiptail_passwords_dont_match
+  fi
+
+}
+
 checkin_at_boot() {
+
   echo "Enabling checkin at boot" >>~/sosetup.log 2>&1
   echo "startup_states: highstate" >> /etc/salt/minion
+
 }
 
 chown_salt_master() {
@@ -175,6 +207,7 @@ chown_salt_master() {
 }
 
 clear_master() {
+
   # Clear out the old master public key in case this is a re-install.
   # This only happens if you re-install the master.
   if [ -f /etc/salt/pki/minion/minion_master.pub ]; then
@@ -217,7 +250,7 @@ configure_minion() {
 copy_master_config() {
 
   # Copy the master config template to the proper directory
-  cp files/master /etc/salt/master
+  cp /root/SecurityOnion/files/master /etc/salt/master
   # Restart the service so it picks up the changes -TODO Enable service on CentOS
   service salt-master restart
 
@@ -256,98 +289,37 @@ create_bond() {
   fi
 
   # Do something different based on the OS
-  if [ $OS == 'centos' ]; then
-    modprobe --first-time bonding
-    touch /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "DEVICE=bond0" > /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "NAME=bond0" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "Type=Bond" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "BONDING_MASTER=yes" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "BOOTPROTO=none" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "BONDING_OPTS=\"mode=0\"" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-bond0
-    echo "MTU=$MTU" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  modprobe --first-time bonding
+  touch /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "DEVICE=bond0" > /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "NAME=bond0" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "Type=Bond" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "BONDING_MASTER=yes" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "BOOTPROTO=none" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "BONDING_OPTS=\"mode=0\"" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-bond0
+  echo "MTU=$MTU" >> /etc/sysconfig/network-scripts/ifcfg-bond0
 
-    # Create Bond configs for the selected monitor interface
-    for BNIC in ${BNICS[@]}; do
-      BONDNIC="${BNIC%\"}"
-      BONDNIC="${BONDNIC#\"}"
-      sed -i 's/ONBOOT=no/ONBOOT=yes/g' /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
-      echo "MASTER=bond0" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
-      echo "SLAVE=yes" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
-      echo "MTU=$MTU" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
-    done
-    nmcli con reload >>~/sosetup.log 2>&1
-    systemctl restart network >>~/sosetup.log 2>&1
-
-  else
-
-    # Need to add 17.04 support still
-    apt-get -y install ifenslave >>~/sosetup.log 2>&1
-    if ! grep -q bonding /etc/modules; then
-      echo "bonding" >> /etc/modules
-    fi
-    modprobe bonding >>~/sosetup.log 2>&1
-
-    local LBACK=$(awk '/auto lo/,/^$/' /etc/network/interfaces)
-    local MINT=$(awk "/auto $MNIC/,/^$/" /etc/network/interfaces)
-
-    # Backup and create a new interface file
-    cp /etc/network/interfaces /etc/network/interfaces.sosetup
-    echo "source /etc/network/interfaces.d/*" > /etc/network/interfaces
-    echo "" >> /etc/network/interfaces
-
-    # Let's set up the new interface file
-    # Populate lo and create file for the management interface
-    IFS=$'\n'
-    for line in $LBACK
-    do
-      echo $line >> /etc/network/interfaces
-    done
-
-    IFS=$'\n'
-    for line in $MINT
-    do
-      echo $line >> /etc/network/interfaces.d/$MNIC
-    done
-
-    # Create entries for each interface that is part of the bond.
-    for BNIC in ${BNICS[@]}; do
-
-      BNIC=$(echo $BNIC |  cut -d\" -f2)
-      echo "auto $BNIC" >> /etc/network/interfaces.d/$BNIC
-      echo "iface $BNIC inet manual" >> /etc/network/interfaces.d/$BNIC
-      echo "  up ip link set \$IFACE promisc on arp off up" >> /etc/network/interfaces.d/$BNIC
-      echo "  down ip link set \$IFACE promisc off down" >> /etc/network/interfaces.d/$BNIC
-      echo "  post-up for i in rx tx sg tso ufo gso gro lro; do ethtool -K \$IFACE \$i off; done" >> /etc/network/interfaces.d/$BNIC
-      echo "  post-up echo 1 > /proc/sys/net/ipv6/conf/\$IFACE/disable_ipv6" >> /etc/network/interfaces.d/$BNIC
-      echo "  bond-master bond0" >> /etc/network/interfaces.d/$BNIC
-      echo "  mtu $MTU" >> /etc/network/interfaces.d/$BNIC
-
-    done
-
-    BN=("${BNICS[@]//\"/}")
-
-    echo "auto bond0" > /etc/network/interfaces.d/bond0
-    echo "iface bond0 inet manual" >> /etc/network/interfaces.d/bond0
-    echo "  bond-mode 0" >> /etc/network/interfaces.d/bond0
-    echo "  bond-slaves $BN" >> /etc/network/interfaces.d/bond0
-    echo "  mtu $MTU" >> /etc/network/interfaces.d/bond0
-    echo "  up ip link set \$IFACE promisc on arp off up" >> /etc/network/interfaces.d/bond0
-    echo "  down ip link set \$IFACE promisc off down" >> /etc/network/interfaces.d/bond0
-    echo "  post-up for i in rx tx sg tso ufo gso gro lro; do ethtool -K \$IFACE \$i off; done" >> /etc/network/interfaces.d/bond0
-    echo "  post-up echo 1 > /proc/sys/net/ipv6/conf/\$IFACE/disable_ipv6" >> /etc/network/interfaces.d/bond0
-  fi
+  # Create Bond configs for the selected monitor interface
+  for BNIC in ${BNICS[@]}; do
+    BONDNIC="${BNIC%\"}"
+    BONDNIC="${BONDNIC#\"}"
+    sed -i 's/ONBOOT=no/ONBOOT=yes/g' /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+    echo "MASTER=bond0" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+    echo "SLAVE=yes" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+    echo "MTU=$MTU" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+  done
+  nmcli con reload >>~/sosetup.log 2>&1
+  systemctl restart network >>~/sosetup.log 2>&1
 
 }
 
 detect_os() {
 
-  # Detect Base OS
+  # Detect Base OS - This needs to be pulled out for ISO install.
   echo "Detecting Base OS" >>~/sosetup.log 2>&1
   if [ -f /etc/redhat-release ]; then
     OS=centos
-    yum -y install bind-utils
   elif [ -f /etc/os-release ]; then
     OS=ubuntu
   else
@@ -357,36 +329,24 @@ detect_os() {
 
 }
 
+disable_onion_user() {
+
+  # Disable the default account cause security.
+  usermod -L onion
+
+}
+
 docker_install() {
 
-  if [ $OS == 'centos' ]; then
-    yum clean expire-cache
-    yum -y install yum-utils device-mapper-persistent-data lvm2 openssl
-    yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-    yum -y update
-    yum -y install docker-ce docker-python python-docker
-    docker_registry
-    echo "Restarting Docker" >>~/sosetup.log 2>&1
-    systemctl restart docker
-    systemctl enable docker
-
-  else
-    if [ $INSTALLTYPE == 'MASTERONLY' ] || [ $INSTALLTYPE == 'EVALMODE' ]; then
-      apt-get update >>~/sosetup.log 2>&1
-      apt-get -y install docker-ce >>~/sosetup.log 2>&1
-      docker_registry >>~/sosetup.log 2>&1
-      echo "Restarting Docker" >>~/sosetup.log 2>&1
-      systemctl restart docker >>~/sosetup.log 2>&1
-    else
-      apt-key add $TMP/gpg/docker.pub >>~/sosetup.log 2>&1
-      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" >>~/sosetup.log 2>&1
-      apt-get update >>~/sosetup.log 2>&1
-      apt-get -y install docker-ce >>~/sosetup.log 2>&1
-      docker_registry >>~/sosetup.log 2>&1
-      echo "Restarting Docker" >>~/sosetup.log 2>&1
-      systemctl restart docker >>~/sosetup.log 2>&1
-    fi
-  fi
+  yum clean expire-cache
+  yum -y install yum-utils device-mapper-persistent-data lvm2 openssl
+  yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  yum -y update
+  yum -y install docker-ce docker-python python-docker
+  docker_registry
+  echo "Restarting Docker" >>~/sosetup.log 2>&1
+  systemctl restart docker
+  systemctl enable docker
 
 }
 
@@ -432,14 +392,18 @@ filter_nics() {
 }
 
 generate_passwords(){
+
   # Generate Random Passwords for Things
   MYSQLPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
   FLEETPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
   HIVEKEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+
 }
 
 get_filesystem_nsm(){
+
   FSNSM=$(df /nsm | awk '$3 ~ /[0-9]+/ { print $2 * 1000 }')
+
 }
 
 get_log_size_limit() {
@@ -457,7 +421,9 @@ get_log_size_limit() {
 }
 
 get_filesystem_root(){
+
   FSROOT=$(df / | awk '$3 ~ /[0-9]+/ { print $2 * 1000 }')
+
 }
 
 get_main_ip() {
@@ -496,20 +462,13 @@ install_prep() {
 install_master() {
 
   # Install the salt master package
-  if [ $OS == 'centos' ]; then
-    yum -y install wget salt-common salt-master >>~/sosetup.log 2>&1
+  yum -y install wget salt-common salt-master >>~/sosetup.log 2>&1
 
-    # Create a place for the keys for Ubuntu minions
-    mkdir -p /opt/so/gpg
-    wget --inet4-only -O /opt/so/gpg/SALTSTACK-GPG-KEY.pub https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub
-    wget --inet4-only -O /opt/so/gpg/docker.pub https://download.docker.com/linux/ubuntu/gpg
-    wget --inet4-only -O /opt/so/gpg/GPG-KEY-WAZUH https://packages.wazuh.com/key/GPG-KEY-WAZUH
-
-  else
-    apt-get install -y salt-common=2018.3.4+ds-1 salt-master=2018.3.4+ds-1 salt-minion=2018.3.4+ds-1 python-m2crypto
-    apt-mark hold salt-common salt-master salt-minion
-    apt-get install -y python-m2crypto
-  fi
+  # Create a place for the keys for Ubuntu minions
+  mkdir -p /opt/so/gpg
+  wget --inet4-only -O /opt/so/gpg/SALTSTACK-GPG-KEY.pub https://repo.saltstack.com/apt/ubuntu/16.04/amd64/latest/SALTSTACK-GPG-KEY.pub
+  wget --inet4-only -O /opt/so/gpg/docker.pub https://download.docker.com/linux/ubuntu/gpg
+  wget --inet4-only -O /opt/so/gpg/GPG-KEY-WAZUH https://packages.wazuh.com/key/GPG-KEY-WAZUH
 
   copy_master_config
 
@@ -622,6 +581,7 @@ node_pillar() {
 }
 
 process_components() {
+
   CLEAN=${COMPONENTS//\"}
   GRAFANA=0
   OSQUERY=0
@@ -633,6 +593,7 @@ process_components() {
 	  let $item=1
   done
   unset IFS
+
 }
 
 saltify() {
@@ -865,6 +826,7 @@ EOF
 }
 
 salt_checkin() {
+
   # Master State to Fix Mine Usage
   if [ $INSTALLTYPE == 'MASTERONLY' ] || [ $INSTALLTYPE == 'EVALMODE' ]; then
   echo "Building Certificate Authority"
@@ -918,10 +880,10 @@ salt_master_directories() {
   mkdir -p /opt/so/saltstack/pillar
 
   # Copy over the salt code and templates
-  cp -R pillar/* /opt/so/saltstack/pillar/
+  cp -R /root/SecurityOnion/pillar/* /opt/so/saltstack/pillar/
   chmod +x /opt/so/saltstack/pillar/firewall/addfirewall.sh
   chmod +x /opt/so/saltstack/pillar/data/addtotab.sh
-  cp -R salt/* /opt/so/saltstack/salt/
+  cp -R /root/SecurityOnion/salt/* /opt/so/saltstack/salt/
 
 }
 
@@ -958,6 +920,12 @@ sensor_pillar() {
   fi
   echo "  access_key: $ACCESS_KEY" >> $TMP/$HOSTNAME.sls
   echo "  access_secret: $ACCESS_SECRET" >>  $TMP/$HOSTNAME.sls
+
+}
+
+set_hostname() {
+
+  hostnamectl set-hostname $HOSTNAME
 
 }
 
@@ -1000,6 +968,20 @@ set_initial_firewall_policy() {
 
   if [ $INSTALLTYPE == 'WARMNODE' ]; then
     echo "blah"
+  fi
+
+}
+
+set_management_interface() {
+
+  if [ $ADDRESSTYPE == 'DHCP' ]; then
+    /usr/bin/nmcli con up $MNIC
+    /usr/bin/nmcli con mod $MNIC connection.autoconnect yes
+  else
+    # Set Static IP
+    /usr/bin/nmcli con mod $MNIC ipv.addresses $MIP/$MMASK ipv4.gateway $MGATEWAY \
+    ipv4.dns $MDNS ipv4.dns-search $MSEARCH ipv4.method manual
+    /usr/bin/nmcli con mod $MNIC connection.autoconnect yes
   fi
 
 }
@@ -1141,6 +1123,53 @@ whiptail_check_exitstatus() {
 
 }
 
+whiptail_create_admin_user() {
+
+  ADMINUSER=$(whiptail --title "Security Onion Install" --inputbox \
+  "Please enter a username for your new admin user" 10 60 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_create_admin_user_password1() {
+
+  ADMINPASS1=$(whiptail --title "Security Onion Install" --passwordbox \
+  "Enter a password for $ADMINUSER" 10 60 3>&1 1>&2 2>&3)
+
+  local exitstatus=$?
+  whiptail_check_exitstatus $exitstatus
+}
+
+whiptail_create_admin_user_password2() {
+
+  ADMINPASS2=$(whiptail --title "Security Onion Install" --passwordbox \
+  "Re-enter a password for $ADMINUSER" 10 60 3>&1 1>&2 2>&3)
+
+  local exitstatus=$?
+  whiptail_check_exitstatus $exitstatus
+
+}
+
+whiptail_create_socore_user() {
+
+  whiptail --title "Security Onion Setup" --msgbox "Set a password for the socore user. This account is used \
+  for adding sensors remotely." 8 78
+
+}
+
+whiptail_create_socore_user_password1() {
+
+  COREPASS1=$(whiptail --title "Security Onion Install" --passwordbox \
+  "Enter a password for user socore" 10 60 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_create_socore_user_password2() {
+
+  COREPASS2=$(whiptail --title "Security Onion Install" --passwordbox \
+  "Re-enter a password for user socore" 10 60 3>&1 1>&2 2>&3)
+
+}
+
 whiptail_cur_close_days() {
 
   CURCLOSEDAYS=$(whiptail --title "Security Onion Setup" --inputbox \
@@ -1150,6 +1179,18 @@ whiptail_cur_close_days() {
   whiptail_check_exitstatus $exitstatus
 
 }
+
+whiptail_dhcp_or_static() {
+
+  ADDRESSTYPE=$(whiptail --title "Security Onion Setup" --radiolist \
+  "Choose how to set up your management interface:" 20 78 4 \
+  "STATIC" "Set a static IPv4 address" ON  \
+  "DHCP" "Use DHCP to configure the Management Interface" OFF 3>&1 1>&2 2>&3 )
+
+  local exitstatus=$?
+  whiptail_check_exitstatus $exitstatus
+}
+
 whiptail_enable_components() {
   COMPONENTS=$(whiptail --title "Security Onion Setup" --checklist \
   "Select Components to install" 20 78 8 \
@@ -1167,7 +1208,9 @@ whiptail_eval_adv() {
 }
 
 whiptail_eval_adv_warning() {
+
   whiptail --title "Security Onion Setup" --msgbox "Please keep in mind the more services that you enable the more RAM that is required." 8 78
+
 }
 
 whiptail_homenet_master() {
@@ -1274,6 +1317,41 @@ whiptail_make_changes() {
 
 }
 
+whiptail_management_interface_dns() {
+
+  MDNS=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter your DNS server using space between multiple" 10 60 8.8.8.8 8.8.4.4 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_management_interface_dns_search() {
+
+  MSEARCH=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter your DNS search domain" 10 60 searchdomain.local 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_management_interface_gateway() {
+
+  MGATEWAY=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter your gateway" 10 60 X.X.X.X 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_management_interface_ip() {
+
+  MIP=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter your IP address" 10 60 X.X.X.X 3>&1 1>&2 2>&3)
+
+}
+
+whiptail_management_interface_mask() {
+
+  MMASK=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter the bit mask for your subnet" 10 60 24 3>&1 1>&2 2>&3)
+
+}
+
 whiptail_management_server() {
 
   MSRV=$(whiptail --title "Security Onion Setup" --inputbox \
@@ -1294,10 +1372,12 @@ whiptail_management_server() {
 
 # Ask if you want to do advanced setup of the Master
 whiptail_master_adv() {
+
   MASTERADV=$(whiptail --title "Security Onion Setup" --radiolist \
   "Choose what type of master install:" 20 78 4 \
   "BASIC" "Install master with recommended settings" ON  \
   "ADVANCED" "Do additional configuration to the master" OFF 3>&1 1>&2 2>&3 )
+
 }
 
 # Ask which additional components to install
@@ -1342,6 +1422,7 @@ whiptail_master_adv_service_brologs() {
   "mysql" "MySQL Logs" ON \
   "socks" "SOCKS Logs" ON \
   "x509" "x.509 Logs" ON 3>&1 1>&2 2>&3 )
+
 }
 
 whiptail_network_notice() {
@@ -1427,6 +1508,12 @@ whiptail_node_ls_input_batch_count() {
 
 }
 
+whiptail_passwords_dont_match() {
+
+  whiptail --title "Security Onion Setup" --msgbox "Passwords don't match. Please re-enter." 8 78
+
+}
+
 whiptail_rule_setup() {
 
   # Get pulled pork info
@@ -1456,7 +1543,8 @@ whiptail_sensor_config() {
 
 whiptail_setup_complete() {
 
-  whiptail --title "Security Onion Setup" --msgbox "Finished installing this as an $INSTALLTYPE. A reboot is recommended." 8 78
+  whiptail --title "Security Onion Setup" --msgbox "Finished installing this as an $INSTALLTYPE. Please log \
+  out and log in with your admin user." 8 78
   install_cleanup
   exit
 
@@ -1464,7 +1552,8 @@ whiptail_setup_complete() {
 
 whiptail_setup_failed() {
 
-  whiptail --title "Security Onion Setup" --msgbox "Install had a problem. Please see /root/sosetup.log for details" 8 78
+  whiptail --title "Security Onion Setup" --msgbox "Install had a problem. Please log in as the admin user to \
+  see /root/sosetup.log for details" 8 78
   install_cleanup
   exit
 
@@ -1514,6 +1603,16 @@ whiptail_node_updates() {
 
 }
 
+whiptail_set_hostname() {
+
+  HOSTNAME=$(whiptail --title "Security Onion Setup" --inputbox \
+  "Enter the Hostname you would like to set." 10 60 localhost 3>&1 1>&2 2>&3)
+
+  local exitstatus=$?
+  whiptail_check_exitstatus $exitstatus
+
+}
+
 whiptail_you_sure() {
 
   whiptail --title "Security Onion Setup" --yesno "Are you sure you want to install Security Onion over the internet?" 8 78
@@ -1548,7 +1647,7 @@ if (whiptail_you_sure); then
   install_prep
 
   # Let folks know they need their management interface already set up.
-  whiptail_network_notice
+  whiptail_set_hostname
 
   # Go ahead and gen the keys so we can use them for any sensor type - Disabled for now
   #minio_generate_keys
@@ -1562,11 +1661,43 @@ if (whiptail_you_sure); then
 
   if [ $INSTALLTYPE == 'MASTERONLY' ]; then
 
+    # Add an admin user
+    whiptail_create_admin_user
+
+    # Get a password for the admin user
+    APMATCH=no
+    while [ $APMATCH != yes ]; do
+      whiptail_create_admin_user_password1
+      whiptail_create_admin_user_password2
+      check_admin_pass
+    done
+
+    # Get a password for the socore user
+    whiptail_create_socore_user
+    SCMATCH=no
+    while [ $SCMATCH != yes ]; do
+      whiptail_create_socore_user_password1
+      whiptail_create_socore_user_password2
+      check_socore_pass
+    done
+
     # Would you like to do an advanced install?
     whiptail_master_adv
 
     # Pick the Management NIC
     whiptail_management_nic
+
+    # Ask if you want dhcp or static
+    whiptail_dhcp_or_static
+
+    # Do this if it static is selected
+    if [ $ADDRESSTYPE != 'DHCP' ]; then
+      whiptail_management_interface_ip
+      whiptail_management_interface_mask
+      whiptail_management_interface_gateway
+      whiptail_management_interface_dns
+      whiptail_management_interface_dns_search
+    fi
 
     # Choose Zeek or Community NSM
     whiptail_bro_version
@@ -1601,6 +1732,10 @@ if (whiptail_you_sure); then
 
     # Last Chance to back out
     whiptail_make_changes
+    set_hostname
+    set_management_interface
+    add_admin_user
+    disable_onion_user
     generate_passwords
     auth_pillar
     clear_master
