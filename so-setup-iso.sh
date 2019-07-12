@@ -979,8 +979,9 @@ set_management_interface() {
     /usr/bin/nmcli con mod $MNIC connection.autoconnect yes
   else
     # Set Static IP
-    /usr/bin/nmcli con mod $MNIC ipv.addresses $MIP/$MMASK ipv4.gateway $MGATEWAY \
+    /usr/bin/nmcli con mod $MNIC ipv4.addresses $MIP/$MMASK ipv4.gateway $MGATEWAY \
     ipv4.dns $MDNS ipv4.dns-search $MSEARCH ipv4.method manual
+    /usr/bin/nmcli con up $MNIC
     /usr/bin/nmcli con mod $MNIC connection.autoconnect yes
   fi
 
