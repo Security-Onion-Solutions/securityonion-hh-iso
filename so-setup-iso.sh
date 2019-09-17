@@ -182,6 +182,22 @@ check_admin_pass() {
 
 }
 
+# Make sure the hive is done initializing before reboot
+check_hive_init_then_reboot() {
+  WAIT_STEP=0
+  MAX_WAIT=100
+    until [ -f /opt/so/state/thehive.txt ] ; do
+    WAIT_STEP=$(( ${WAIT_STEP} + 1 ))
+    echo "Waiting on the_hive to init...Attempt #$WAIT_STEP"
+  	  if [ ${WAIT_STEP} -gt ${MAX_WAIT} ]; then
+  			  echo "ERROR: We waited ${MAX_WAIT} seconds but the_hive is not working."
+  			  exit 5
+  	  fi
+  		  sleep 1s;
+    done
+    shutdown -r now
+}
+
 check_socore_pass() {
 
   if [ $COREPASS1 == $COREPASS2 ]; then
@@ -1544,8 +1560,8 @@ whiptail_sensor_config() {
 
 whiptail_setup_complete() {
 
-  whiptail --title "Security Onion Setup" --msgbox "Finished installing this as an $INSTALLTYPE. Please log \
-  out and log in with your admin user." 8 78
+  whiptail --title "Security Onion Setup" --msgbox "Finished installing this as an $INSTALLTYPE. \
+  Press Enter to reboot." 8 78
   install_cleanup
   exit
 
@@ -1838,6 +1854,11 @@ if (whiptail_you_sure); then
     GOODSETUP=$(tail -10 /root/sosetup.log | grep Failed | awk '{ print $2}')
     if [[ $GOODSETUP == '0' ]]; then
       whiptail_setup_complete
+      if [[ $THEHIVE == '1' ]]; then
+        check_hive_init_then_reboot
+      else
+        shutdown -r now
+      fi
     else
       whiptail_setup_failed
     fi
@@ -1911,8 +1932,10 @@ if (whiptail_you_sure); then
     GOODSETUP=$(tail -10 /root/sosetup.log | grep Failed | awk '{ print $2}')
     if [[ $GOODSETUP == '0' ]]; then
       whiptail_setup_complete
+      shutdown -r now
     else
       whiptail_setup_failed
+      shutdown -r now
     fi
   fi
 
@@ -2056,14 +2079,26 @@ if (whiptail_you_sure); then
     if [ $OS == 'centos' ]; then
       if [[ $GOODSETUP == '1' ]]; then
         whiptail_setup_complete
+        if [[ $THEHIVE == '1' ]]; then
+          check_hive_init_then_reboot
+        else
+          shutdown -r now
+        fi
       else
         whiptail_setup_failed
+        shutdown -r now
       fi
     else
       if [[ $GOODSETUP == '0' ]]; then
         whiptail_setup_complete
+        if [[ $THEHIVE == '1' ]]; then
+          check_hive_init_then_reboot
+        else
+          shutdown -r now
+        fi
       else
         whiptail_setup_failed
+        shutdown -r now
       fi
     fi
   fi
@@ -2141,8 +2176,10 @@ if (whiptail_you_sure); then
     GOODSETUP=$(tail -10 /root/sosetup.log | grep Failed | awk '{ print $2}')
     if [[ $GOODSETUP == '0' ]]; then
       whiptail_setup_complete
+      shutdown -r now
     else
       whiptail_setup_failed
+      shutdown -r now
     fi
 
     set_initial_firewall_policy
@@ -2161,6 +2198,7 @@ if (whiptail_you_sure); then
     checkin_at_boot
 
     whiptail_setup_complete
+    shutdown -r now
   fi
 
 else
