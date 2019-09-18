@@ -1877,6 +1877,7 @@ if (whiptail_you_sure); then
       whiptail_basic_suri
     fi
     whiptail_make_changes
+    set_hostname
     set_management_interface
     add_admin_user
     disable_onion_user
@@ -1962,6 +1963,7 @@ if (whiptail_you_sure); then
     CURCLOSEDAYS=30
     process_components
     whiptail_make_changes
+    set_hostname
     set_management_interface
     add_admin_user
     add_socore_user_master
@@ -2122,6 +2124,7 @@ if (whiptail_you_sure); then
       LSINPUTBATCHCOUNT=125
     fi
     whiptail_make_changes
+    set_hostname
     set_management_interface
     add_admin_user
     disable_onion_user
