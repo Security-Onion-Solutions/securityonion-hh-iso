@@ -1877,6 +1877,7 @@ if (whiptail_you_sure); then
       whiptail_basic_suri
     fi
     whiptail_make_changes
+    set_management_interface
     add_admin_user
     disable_onion_user
     clear_master
@@ -1961,6 +1962,7 @@ if (whiptail_you_sure); then
     CURCLOSEDAYS=30
     process_components
     whiptail_make_changes
+    set_management_interface
     add_admin_user
     add_socore_user_master
     disable_onion_user
@@ -1973,10 +1975,6 @@ if (whiptail_you_sure); then
     get_filesystem_nsm
     get_log_size_limit
     get_main_ip
-    # Add the user so we can sit back and relax
-    echo ""
-    echo "**** Please set a password for socore. You will use this password when setting up other Nodes/Sensors"
-    echo ""
     add_socore_user_master
     {
       sleep 0.5
@@ -2124,6 +2122,7 @@ if (whiptail_you_sure); then
       LSINPUTBATCHCOUNT=125
     fi
     whiptail_make_changes
+    set_management_interface
     add_admin_user
     disable_onion_user
     clear_master
