@@ -82,15 +82,6 @@ add_socore_user_master() {
 
 }
 
-add_socore_user_notmaster() {
-
-  echo "Add socore user on non master" >>~/sosetup.log 2>&1
-  # Add socore user to the non master system. Probably not a bad idea to make system user
-  groupadd --gid 939 socore
-  $ADDUSER --uid 939 --gid 939 --home-dir /opt/so --no-create-home socore
-
-}
-
 # Create an auth pillar so that passwords survive re-install
 auth_pillar(){
 
@@ -1663,7 +1654,7 @@ if (whiptail_you_sure); then
   # Create a temp dir to get started
   install_prep
 
-  # Let folks know they need their management interface already set up.
+  # Let's set a hostname
   whiptail_set_hostname
 
   # Go ahead and gen the keys so we can use them for any sensor type - Disabled for now
@@ -1672,49 +1663,50 @@ if (whiptail_you_sure); then
   # What kind of install are we doing?
   whiptail_install_type
 
+  # Add an admin user
+  whiptail_create_admin_user
+
+  # Get a password for the admin user
+  APMATCH=no
+  while [ $APMATCH != yes ]; do
+    whiptail_create_admin_user_password1
+    whiptail_create_admin_user_password2
+    check_admin_pass
+  done
+
+  # Get a password for the socore user
+  whiptail_create_socore_user
+  SCMATCH=no
+  while [ $SCMATCH != yes ]; do
+    whiptail_create_socore_user_password1
+    whiptail_create_socore_user_password2
+    check_socore_pass
+  done
+
+  # Pick the Management NIC
+  whiptail_management_nic
+
+  # Ask if you want dhcp or static
+  whiptail_dhcp_or_static
+
+  # Do this if it static is selected
+  if [ $ADDRESSTYPE != 'DHCP' ]; then
+    whiptail_management_interface_ip
+    whiptail_management_interface_mask
+    whiptail_management_interface_gateway
+    whiptail_management_interface_dns
+    whiptail_management_interface_dns_search
+  fi
+
+
   ####################
   ##     Master     ##
   ####################
 
   if [ $INSTALLTYPE == 'MASTERONLY' ]; then
 
-    # Add an admin user
-    whiptail_create_admin_user
-
-    # Get a password for the admin user
-    APMATCH=no
-    while [ $APMATCH != yes ]; do
-      whiptail_create_admin_user_password1
-      whiptail_create_admin_user_password2
-      check_admin_pass
-    done
-
-    # Get a password for the socore user
-    whiptail_create_socore_user
-    SCMATCH=no
-    while [ $SCMATCH != yes ]; do
-      whiptail_create_socore_user_password1
-      whiptail_create_socore_user_password2
-      check_socore_pass
-    done
-
     # Would you like to do an advanced install?
     whiptail_master_adv
-
-    # Pick the Management NIC
-    whiptail_management_nic
-
-    # Ask if you want dhcp or static
-    whiptail_dhcp_or_static
-
-    # Do this if it static is selected
-    if [ $ADDRESSTYPE != 'DHCP' ]; then
-      whiptail_management_interface_ip
-      whiptail_management_interface_mask
-      whiptail_management_interface_gateway
-      whiptail_management_interface_dns
-      whiptail_management_interface_dns_search
-    fi
 
     # Choose Zeek or Community NSM
     whiptail_bro_version
@@ -1752,6 +1744,7 @@ if (whiptail_you_sure); then
     set_hostname
     set_management_interface
     add_admin_user
+    add_socore_user_master
     disable_onion_user
     generate_passwords
     auth_pillar
@@ -1765,10 +1758,6 @@ if (whiptail_you_sure); then
     # Figure out the main IP address
     get_main_ip
 
-    # Add the user so we can sit back and relax
-    echo ""
-    echo "**** Please set a password for socore. You will use this password when setting up other Nodes/Sensors"
-    echo ""
     add_socore_user_master
 
     # Install salt and dependencies
@@ -1870,7 +1859,6 @@ if (whiptail_you_sure); then
   ####################
 
   if [ $INSTALLTYPE == 'SENSORONLY' ]; then
-    whiptail_management_nic
     filter_nics
     whiptail_bond_nics
     whiptail_management_server
@@ -1889,6 +1877,8 @@ if (whiptail_you_sure); then
       whiptail_basic_suri
     fi
     whiptail_make_changes
+    add_admin_user
+    disable_onion_user
     clear_master
     mkdir -p /nsm
     get_filesystem_root
@@ -1944,9 +1934,6 @@ if (whiptail_you_sure); then
   #######################
 
   if [ $INSTALLTYPE == 'EVALMODE' ]; then
-    # Select the management NIC
-    whiptail_management_nic
-
     # Filter out the management NIC
     filter_nics
 
@@ -1974,6 +1961,9 @@ if (whiptail_you_sure); then
     CURCLOSEDAYS=30
     process_components
     whiptail_make_changes
+    add_admin_user
+    add_socore_user_master
+    disable_onion_user
     #eval_mode_hostsfile
     generate_passwords
     auth_pillar
@@ -2108,7 +2098,6 @@ if (whiptail_you_sure); then
   ###################
 
   if [ $INSTALLTYPE == 'STORAGENODE' ] || [ $INSTALLTYPE == 'PARSINGNODE' ] || [ $INSTALLTYPE == 'HOTNODE' ] || [ $INSTALLTYPE == 'WARMNODE' ]; then
-    whiptail_management_nic
     whiptail_management_server
     whiptail_master_updates
     set_updates
@@ -2135,6 +2124,8 @@ if (whiptail_you_sure); then
       LSINPUTBATCHCOUNT=125
     fi
     whiptail_make_changes
+    add_admin_user
+    disable_onion_user
     clear_master
     mkdir -p /nsm
     get_filesystem_root
