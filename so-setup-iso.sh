@@ -1565,7 +1565,7 @@ whiptail_setup_failed() {
   whiptail --title "Security Onion Setup" --msgbox "Install had a problem. Please log in as the admin user to \
   see /root/sosetup.log for details" 8 78
   install_cleanup
-  exit
+  #exit
 
 }
 
@@ -1852,6 +1852,7 @@ if (whiptail_you_sure); then
       fi
     else
       whiptail_setup_failed
+      shutdown -r now
     fi
 
   fi
