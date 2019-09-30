@@ -186,6 +186,8 @@ check_hive_init_then_reboot() {
   	  fi
   		  sleep 1s;
     done
+    docker stop so-thehive
+    docker rm so-thehive
     shutdown -r now
 }
 
@@ -404,6 +406,7 @@ generate_passwords(){
   MYSQLPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
   FLEETPASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
   HIVEKEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
+  SENSORONIKEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 20 | head -n 1)
 
 }
 
@@ -485,10 +488,10 @@ ls_heapsize() {
 
   # Determine LS Heap Size
   if [ $TOTAL_MEM -ge 16000 ] ; then
-      LS_HEAP_SIZE="4192m"
+      LS_HEAP_SIZE="1000m"
   else
-      # Set a max of 1GB heap if you have less than 16GB RAM
-      LS_HEAP_SIZE="2g"
+      # Set a max of 500m heap if you have less than 16GB RAM
+      LS_HEAP_SIZE="500m"
   fi
 
 }
@@ -503,8 +506,8 @@ master_pillar() {
   echo "  esheap: $ES_HEAP_SIZE" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   echo "  esclustername: {{ grains.host }}" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   if [ $INSTALLTYPE == 'EVALMODE' ]; then
-    echo "  freq: 1" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
-    echo "  domainstats: 1" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
+    echo "  freq: 0" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
+    echo "  domainstats: 0" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
     echo "  ls_pipeline_batch_size: 125" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
     echo "  ls_input_threads: 1" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
     echo "  ls_batch_count: 125" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
@@ -531,6 +534,7 @@ master_pillar() {
   echo "  osquery: $OSQUERY" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   echo "  wazuh: $WAZUH" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   echo "  thehive: $THEHIVE" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
+  echo "  playbook: 0" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   }
 
 master_static() {
@@ -549,6 +553,7 @@ master_static() {
   echo "  hivepassword: hivechangeme" >> /opt/so/saltstack/pillar/static.sls
   echo "  hivekey: $HIVEKEY" >> /opt/so/saltstack/pillar/static.sls
   echo "  fleetsetup: 0" >> /opt/so/saltstack/pillar/static.sls
+  echo "  sensoronikey: $SENSORONIKEY" >> /opt/so/saltstack/pillar/static.sls
   if [[ $MASTERUPDATES == 'MASTER' ]]; then
     echo "  masterupdate: 1" >> /opt/so/saltstack/pillar/static.sls
   else
@@ -932,9 +937,10 @@ sensor_pillar() {
 
 set_hostname() {
 
-  hostnamectl set-hostname $HOSTNAME
+  hostnamectl set-hostname --static $HOSTNAME
   echo "127.0.0.1   $HOSTNAME $HOSTNAME.localdomain localhost localhost.localdomain localhost4 localhost4.localdomain" > /etc/hosts
   echo "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6" >> /etc/hosts
+  echo $HOSTNAME > /etc/hostname
 
 }
 
@@ -1563,7 +1569,7 @@ whiptail_setup_complete() {
 whiptail_setup_failed() {
 
   whiptail --title "Security Onion Setup" --msgbox "Install had a problem. Please log in as the admin user to \
-  see /root/sosetup.log for details" 8 78
+  see /root/sosetup.log for details. Press Enter to reboot." 8 78
   install_cleanup
   #exit
 
@@ -1954,7 +1960,7 @@ if (whiptail_you_sure); then
     es_heapsize
     ls_heapsize
     NODE_ES_HEAP_SIZE="600m"
-    NODE_LS_HEAP_SIZE="2000m"
+    NODE_LS_HEAP_SIZE="500m"
     LSPIPELINEWORKERS=1
     LSPIPELINEBATCH=125
     LSINPUTTHREADS=1
