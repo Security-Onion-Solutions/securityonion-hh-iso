@@ -534,7 +534,7 @@ master_pillar() {
   echo "  osquery: $OSQUERY" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   echo "  wazuh: $WAZUH" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   echo "  thehive: $THEHIVE" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
-  echo "  playbook: 0" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
+  echo "  playbook: $PLAYBOOK" >> /opt/so/saltstack/pillar/masters/$HOSTNAME.sls
   }
 
 master_static() {
@@ -599,6 +599,7 @@ process_components() {
   OSQUERY=0
   WAZUH=0
   THEHIVE=0
+  PLAYBOOK=0
 
   IFS=$' '
   for item in $(echo "$CLEAN"); do
@@ -1213,7 +1214,8 @@ whiptail_enable_components() {
   "GRAFANA" "Enable Grafana for system monitoring" ON \
   "OSQUERY" "Enable Fleet with osquery" ON \
   "WAZUH" "Enable Wazuh" ON \
-  "THEHIVE" "Enable TheHive" ON 3>&1 1>&2 2>&3 )
+  "THEHIVE" "Enable TheHive" ON \
+  "PLAYBOOK" "Enable Playbook" ON 3>&1 1>&2 2>&3 )
 }
 
 whiptail_eval_adv() {
@@ -1841,6 +1843,10 @@ if (whiptail_you_sure); then
       if [[ $THEHIVE == '1' ]]; then
         echo -e "XXX\n87\nInstalling TheHive... \nXXX"
         salt-call state.apply hive >>~/sosetup.log 2>&1
+      fi
+      if [[ $PLAYBOOK == '1' ]]; then
+        echo -e "XXX\n87\nInstalling Playbook... \nXXX"
+        salt-call state.apply playbook >>~/sosetup.log 2>&1
       fi
       echo -e "XXX\n75\nEnabling Checking at Boot... \nXXX"
       checkin_at_boot >>~/sosetup.log 2>&1
