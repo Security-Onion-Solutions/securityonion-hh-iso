@@ -313,7 +313,8 @@ create_bond() {
   for BNIC in ${BNICS[@]}; do
     BONDNIC="${BNIC%\"}"
     BONDNIC="${BONDNIC#\"}"
-    sed -i 's/ONBOOT=no/ONBOOT=yes/g' /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+    echo "DEVICE=$BONDNIC" > /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
+    echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
     echo "MASTER=bond0" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
     echo "SLAVE=yes" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
     echo "MTU=$MTU" >> /etc/sysconfig/network-scripts/ifcfg-$BONDNIC
