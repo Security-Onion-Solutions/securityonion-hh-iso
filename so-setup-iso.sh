@@ -2074,11 +2074,11 @@ if (whiptail_you_sure); then
       salt-call state.apply soctopus >>~/sosetup.log 2>&1
       if [[ $THEHIVE == '1' ]]; then
         echo -e "XXX\n96\nInstalling The Hive... \nXXX"
-        salt-call state.apply hive >> $SETUPLOG 2>&1
+        salt-call state.apply hive >> ~/sosetup.log 2>&1
       fi
       if [[ $PLAYBOOK == '1' ]]; then
         echo -e "XXX\n97\nInstalling Playbook... \nXXX"
-        salt-call state.apply playbook >> $SETUPLOG 2>&1
+        salt-call state.apply playbook >> ~/sosetup.log 2>&1
       fi
       echo -e "XXX\n98\nSetting checkin to run on boot... \nXXX"
       checkin_at_boot >>~/sosetup.log 2>&1
